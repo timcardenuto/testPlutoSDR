@@ -1,5 +1,5 @@
 # PlutoSDR Development
-Just my notes/files on using the PlutoSDR with CentOS 7. For more info see documentation at:
+Just my notes/files on using the PlutoSDR with CentOS 7. The source code, at least right now, is a shameless copy of the [example on the Analog Devices wiki](https://wiki.analog.com/university/tools/pluto/controlling_the_transceiver_and_transferring_data). For more info see documentation at:
  * https://wiki.analog.com/university/tools/pluto/developers
  * https://analogdevicesinc.github.io/libiio/
  * https://buildroot.org/downloads/manual/manual.html
@@ -30,7 +30,7 @@ Copy a rules file to ensure you have permissions to access the PlutoSDR device. 
 
 	wget https://raw.githubusercontent.com/analogdevicesinc/plutosdr-fw/master/scripts/53-adi-plutosdr-usb.rules
 	sudo mv 53-adi-plutosdr-usb.rules /etc/udev/rules.d/
-	udevadm control --reload-rules
+	sudo udevadm control --reload-rules
 
 You may also need to be part of dialout group, I already was so can't confirm if it really matters or not. You have to log out and back in for this to take effect.
 
@@ -71,13 +71,12 @@ Download and install the 2016.4 version of Xilinx Vivado and SDK to `/opt/Xilinx
 	export PATH=$PATH:/opt/Xilinx/SDK/2016.4/bin:/opt/Xilinx/SDK/2016.4/gnu/arm/lin/bin
 	export VIVADO_SETTINGS=/opt/Xilinx/Vivado/2016.4/settings64.sh
 
-Grab the core source code:
+Grab the core PlutoSDR source code and the test program:
 
 	git clone --recursive https://github.com/analogdevicesinc/plutosdr-fw.git
 	git clone https://github.com/timcardenuto/testPlutoSDR.git 
 
-### Add to buildroot image
-If you copied/cloned this project into same directory as the `plutosdr-fw` project, then you can run the script `add_to_plutosdr_buildroot.sh`. This should create all the files needed to add this project to the build process.
+Add the test program to the buildroot image. If you copied/cloned this project into same directory as the `plutosdr-fw` project as indicated above, then you can run the script `add_to_plutosdr_buildroot.sh`. This should create all the files needed to add this project to the build process.
 
 ### Build/flash image
 
