@@ -9,7 +9,9 @@ int receive(struct iio_context *ctx)
 	struct iio_channel *rx0_i, *rx0_q;
 	struct iio_buffer *rxbuf;
  
+	// tag::code[]
 	dev = iio_context_find_device(ctx, "cf-ad9361-lpc");
+	// end::code[]
  
 	rx0_i = iio_device_find_channel(dev, "voltage0", 0);
 	rx0_q = iio_device_find_channel(dev, "voltage1", 0);
@@ -35,7 +37,7 @@ int receive(struct iio_context *ctx)
 		for (p_dat = iio_buffer_first(rxbuf, rx0_i); p_dat < p_end; p_dat += p_inc, t_dat += p_inc) {
 			const int16_t i = ((int16_t*)p_dat)[0]; // Real (I)
 			const int16_t q = ((int16_t*)p_dat)[1]; // Imag (Q)
- 
+
 			/* Process here */
 			if (debug) { printf("%i,%i,", i,q); }
 		}
