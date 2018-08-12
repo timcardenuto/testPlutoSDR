@@ -10,10 +10,9 @@ Just my notes/files on using the PlutoSDR with CentOS 7. The source code, at lea
  - https://elinux.org/images/2/2a/Using-buildroot-real-project.pdf
 
 == Setup libiio driver
+Original instructions https://wiki.analog.com/university/tools/pluto/drivers/linux[here] and https://wiki.analog.com/resources/tools-software/linux-software/libiio#how_to_build_it[here]. There's apparently some bug so you have to update a linux kernel header file first:
 
-Upgrade a header file:
-
-	$ wget https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/usb/functionfs.h
+	$ curl -s https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/usb/functionfs.h -o functionfs.h
 	$ sudo mv functionfs.h /usr/include/linux/usb/
 
 Install some deps:
@@ -33,11 +32,11 @@ Build and install the library:
 
 Copy a rules file to ensure you have permissions to access the PlutoSDR device. You'll want to edit it before reloading udev to remove the `GROUP="plugdev"` and change `MODE="0664"` to `MODE="0666"`.
 
-	$ wget https://raw.githubusercontent.com/analogdevicesinc/plutosdr-fw/master/scripts/53-adi-plutosdr-usb.rules
+	$ curl -s https://raw.githubusercontent.com/analogdevicesinc/plutosdr-fw/master/scripts/53-adi-plutosdr-usb.rules -o 53-adi-plutosdr-usb.rules
 	$ sudo mv 53-adi-plutosdr-usb.rules /etc/udev/rules.d/
 	$ sudo udevadm control --reload-rules
 
-You may also need to be part of dialout group, I already was so can't confirm if it really matters or not. You have to log out and back in for this to take effect.
+You may also need to be part of `dialout` group, I already was so can't confirm if it really matters or not. You have to log out and back in for this to take effect.
 
 	$ sudo usermod -a -G dialout <username>
 
@@ -46,7 +45,7 @@ Finally not entirely sure the following is required but was indicated:
 	$ wget http://swdownloads.analog.com/cse/share/iiod-usb.conf
 	$ sudo cp iiod-usb.conf /etc/init.d/
 
-Check that everything works, plug in your PlutoSDR and run iio_info -s. If you're lucky you'll see something like the following.
+Check that everything works, plug in your PlutoSDR and run `iio_info -s`. If you're lucky you'll see something like the following.
 
 	$ iio_info -s
 	Library version: 0.15 (git tag: 6ecff5d)
@@ -55,20 +54,84 @@ Check that everything works, plug in your PlutoSDR and run iio_info -s. If you'r
 		0: Local devices [local:]
 		1: 0456:b673 (Analog Devices Inc. PlutoSDR (ADALM-PLUTO)), serial=104473ce69910006eeff1e006dad89b158 [usb:2.4.
 
-So what's cool is that you can actual use the same iio interface calls from both the host (laptop/PC) and target (embedded device/PlutoSDR) so the same testPlutoSDR source code will work on either platform, just with a re-compile. To use this program on the host just run `make`.
+== Connect to PlutoSDR
+You should now be able to connect to the PlutoSDR over serial using the username `root` and password `analog`.
+
+    $ sudo yum install screen
+    $ screen /dev/ttyACM0 115200
+
+    Welcome to Pluto
+    pluto login: root
+    Password:
+    Welcome to:
+    ______ _       _        _________________
+    | ___ \ |     | |      /  ___|  _  \ ___ \
+    | |_/ / |_   _| |_ ___ \ `--.| | | | |_/ /
+    |  __/| | | | | __/ _ \ `--. \ | | |    /
+    | |   | | |_| | || (_) /\__/ / |/ /| |\ \
+    \_|   |_|\__,_|\__\___/\____/|___/ \_| \_|
+
+    v0.26
+    http://wiki.analog.com/university/tools/pluto
+    #
+
+To exit the serial connection you press `Ctrl-A` and then `\` and then `y` and then `Enter`. The PlutoSDR is apparently also auto-mounted as a storage device and an Ethernet device. To ssh to it over the Ethernet connection, add the following to your `~/.ssh/config` file:
+
+    # This is the default ssh_config for the PlutoSDR
+    # This file should be located in ~/.ssh/config or /etc/ssh/ssh_config
+    # If you update the IP number, you need to do the same in this file
+    Host plutosdr
+        HostName 192.168.2.1
+        UserKnownHostsFile=/dev/null
+        HostKeyAlias plutosdr
+        StrictHostKeyChecking=no
+        CheckHostIP no
+        User root
+    ChallengeResponseAuthentication no
+
+You might need to fix the permissions on the file by running `chmod 644 ~/.ssh/config`. Now you should be able to ssh to the PlutoSDR:
+
+    $ ssh plutosdr
+    Warning: Permanently added 'plutosdr' (ECDSA) to the list of known hosts.
+    root@plutosdr's password:
+    Welcome to:
+    ______ _       _        _________________
+    | ___ \ |     | |      /  ___|  _  \ ___ \
+    | |_/ / |_   _| |_ ___ \ `--.| | | | |_/ /
+    |  __/| | | | | __/ _ \ `--. \ | | |    /
+    | |   | | |_| | || (_) /\__/ / |/ /| |\ \
+    \_|   |_|\__,_|\__\___/\____/|___/ \_| \_|
+
+    v0.26
+    http://wiki.analog.com/university/tools/pluto
+    #
+
+So what's cool is that you can actual use the same iio interface calls from both the host (laptop/PC) and target (embedded device/PlutoSDR) so the same testPlutoSDR source code will work on either platform, just with a re-compile. To use this program on the host just run `make` which is really only doing this:
+
+    $ gcc -o testPlutoSDR testPlutoSDR.c -I/usr/include -liio
+
+To cross-compile for the PlutoSDR ARM with the same iio interface  (might have to make buildroot first):
+
+   $ plutosdr-fw/buildroot/output/host/usr/bin/arm-xilinx-linux-gnueabi-gcc -o testPlutoSDR_ARM testPlutoSDR.c -I.plutosdr-fw/buildroot/output/host/arm-buildroot-linux-gnueabi/sysroot/usr/include -liio
+
+Or for a cmake project:
+
+   $ cmake -DCMAKE_TOOLCHAIN_FILE=plutosdr-fw/buildroot/output/toolchainfile.cmake
+   $ make
 
 
-=== Setup Zynq/ARM build environment
+
+== Setup Zynq/ARM build environment
 
 Install some dependencies:
 
 	$ sudo yum install dtc glibc.i686 libstdc++.i686 git ccache fakeroot help2man mtools rsync openssl-devel ncurses-devel
-	$ wget http://dfu-util.sourceforge.net/releases/dfu-util-0.9.tar.gz
+	$ curl -s http://dfu-util.sourceforge.net/releases/dfu-util-0.9.tar.gz -o dfu-util-0.9.tar.gz
 	$ tar -zxf dfu-util-0.9.tar.gz
 	$ cd dfu-util-0.9/
 	$ ./configure
 	$ make
-	$ sudo make install	
+	$ sudo make install
 
 Download and install the 2016.4 version of Xilinx Vivado and SDK to `/opt/Xilinx/` (or wherever). Then setup some environment variables:
 
@@ -76,29 +139,79 @@ Download and install the 2016.4 version of Xilinx Vivado and SDK to `/opt/Xilinx
 	$ export PATH=$PATH:/opt/Xilinx/SDK/2016.4/bin:/opt/Xilinx/SDK/2016.4/gnu/arm/lin/bin
 	$ export VIVADO_SETTINGS=/opt/Xilinx/Vivado/2016.4/settings64.sh
 
-Grab the core PlutoSDR source code and the test program:
+Grab the core PlutoSDR source code and the this test program (if you didn't already):
 
 	$ git clone --recursive https://github.com/analogdevicesinc/plutosdr-fw.git
-	$ git clone https://github.com/timcardenuto/testPlutoSDR.git 
+    $ git clone https://github.com/timcardenuto/testPlutoSDR.git
 
 
-Add the test program to the buildroot image. If you copied/cloned this project into same directory as the `plutosdr-fw` project as indicated above, then you can run the script `add_to_plutosdr_buildroot.sh`. This should create all the files needed to add this project to the build process.
+== Add a project to the BuildRoot image
+Figuring out how to adding your own project to BuildRoot is actually not easy, so I created a simple script to do it for this test program. This assumes you cloned the `testPlutoSDR` project to the same directory as `plutosdr-fw` as described above:
 
-=== Build/flash image
+    $ cd testPlutoSDR
+    $ ./add_to_plutosdr_buildroot.sh
 
-Run build:
+If you're interested in what the script does, continue but don't actually run any of following commands. If you don't care skip to the next section.
+
+First add your project directory under the `buildroot/packages` directory:
+
+    mkdir plutosdr-fw/buildroot/packages/testPlutoSDR
+    cd plutosdr-fw/buildroot/packages/testPlutoSDR/
+
+Create a `Config.in` file under `buildroot/packages/testPlutoSDR/` that contains the following, replacing my project name with yours where applicable.
+
+    config BR2_PACKAGE_TESTPLUTOSDR
+        bool "testplutosdr"
+        help
+            this is some message
+            blah blah
+
+    comment "blah blah testPlutoSDR"
+
+Create a `testPlutoSDR.mk` file under `buildroot/packages/testPlutoSDR/` that contains the following, replacing my project name with yours where applicable. There are alot of options you can read about in the BuildRoot manual for https://buildroot.org/downloads/manual/manual.html#generic-package-tutorial[generic package] configurations or even auto-tools or CMake projects, but this is the bare minimum for a hello-world style binary.
+
+    TESTPLUTOSDR_SITE = $(TOPDIR)/../testPlutoSDR-0.0.1.tar.gz
+    TESTPLUTOSDR_SITE_METHOD = file
+    TESTPLUTOSDR_DEPENDENCIES = libiio
+
+    define TESTPLUTOSDR_EXTRACT_CMDS
+	cp -a $(TOPDIR)/../testPlutoSDR/* $(@D)/
+    endef
+
+    define TESTPLUTOSDR_BUILD_CMDS
+         $(TARGET_CC) $(TARGET_CFLAGS) $(TARGET_LDFLAGS) $(@D)/testPlutoSDR.c -o $(@D)/testPlutoSDR -liio
+    endef
+
+    define TESTPLUTOSDR_INSTALL_TARGET_CMDS
+        $(INSTALL) -D -m 0755 $(@D)/testPlutoSDR_ARM $(TARGET_DIR)/usr/bin
+    endef
+
+    $(eval $(generic-package))
+
+Add your new package to the top level `plutosdr-fw/buildroot/package/Config.in` file by adding this to the end, right before the final `endmenu` line:
+
+    menu "testPlutoSDR"
+	    source "package/testPlutoSDR/Config.in"
+    endmenu
+
+Finally, enable your package to be built by running the following command (adds it to the primary buildroot config for the PlutoSDR).
+
+    $ echo "BR2_PACKAGE_TESTPLUTOSDR=y" >> plutosdr-fw/buildroot/configs/zynq_pluto_defconfig
+
+
+== Build/flash image
+Build the PlutoSDR firmware images:
 
 	$ cd plutosdr-fw
 	$ make
-  
+
 This will take a while the first time. If it errors out on a missing /bin/tar then you make have to cd into plutosdr-fw/buildroot and run make, before going back to the top level to run make.
 
-
-When you get a succesful build, put PlutoSDR into DFU mode (using SSH or serial):
+When you get a succesful build, put PlutoSDR into USB Device Firmware Upgrade (DFU) mode using SSH or serial. Default username is `root`, password is `analog`:
 
 	$ ssh plutosdr
 	Warning: Permanently added 'plutosdr' (ECDSA) to the list of known hosts.
-	root@plutosdr's password: 
+	root@plutosdr's password:
 	Welcome to:
 	______ _       _        _________________
 	| ___ \ |     | |      /  ___|  _  \ ___ \
@@ -120,7 +233,7 @@ When the LED stops blinking run the DFU reflash command:
 	Copyright 2010-2016 Tormod Volden and Stefan Schmidt
 	This program is Free Software and has ABSOLUTELY NO WARRANTY
 	Please report bugs to http://sourceforge.net/p/dfu-util/tickets/
-	
+
 	Match vendor ID from file: 0456
 	Match product ID from file: b673
 	Opening DFU capable USB device...
@@ -142,15 +255,117 @@ When the LED stops blinking run the DFU reflash command:
 
 When that's done, unplug and reattach the PlutoSDR. Now when you ssh/serial in you'll find `/usr/bin/testPlutoSDR` which will use the IIO library to tune and receive samples from the AD936x.
 
-=== Build FPGA images
-Assuming you have the same environment variables set as above, run the following to build the 'pluto' Vivado project for the PlutoSDR. This looks like it is (supposed to be) done automatically as part of the overall firmware build process since the same syntax is in the top level Makefile, but it may clean up all the temp files and logs after since they weren't there for me until I ran this manually.
 
-	$ source $VIVADO_SETTINGS
-	$ make -C plutosdr-fw/hdl/projects/pluto
+== What are all these files?
+There are a series of files built as part of this process:
 
-You can tail the logs while this is running:
+[cols="2*<.^",options="header"]
+|==============================
+| File | Description
+| boot.frm | First and Second Stage Boot Loader (u-boot + fsbl + uEnv) for use with USB Mass Storage Device
+| pluto.frm | PlutoSDR firmware file for use with USB Mass Storage Device method of flashing that includes the FPGA Bit File, Linux kernel (all drivers), and ram based file system
+| boot.dfu | First and Second Stage Boot Loader (u-boot + fsbl) for use with DFU
+| uboot-env.dfu |  Default U-Boot environment for DFU (not included boot.dfu)
+| pluto.dfu | PlutoSDR firmware file for use with DFU method of flashing that includes the FPGA Bit File, Linux kernel (all drivers), and ram based file system
+| zImage | Compressed Linux kernel.
+| rootfs.cpio.gz | BuildRoot created root file system.
+| zynq-pluto-sdr.dtb |
+| zynq-pluto-sdr-revb.dtb |
+| zynq-pluto-sdr-revc.dtb |
+| pluto.itb.tmp |
+| uboot-env.bin.tmp |
+| u-boot.elf |
+| boot.bin.tmp |
+|==============================
+
+
+
+== Build FPGA images
+Official instructions https://wiki.analog.com/university/tools/pluto/building_the_image[here]. Assuming you're starting from a fresh shell and didn't already set the environment variables, run the following to build the 'pluto' Vivado project for the PlutoSDR.
+
+    $ export CROSS_COMPILE=arm-xilinx-linux-gnueabi-
+    $ export PATH=$PATH:/opt/Xilinx/SDK/2016.4/bin:/opt/Xilinx/SDK/2016.4/gnu/arm/lin/bin
+    $ export VIVADO_SETTINGS=/opt/Xilinx/Vivado/2016.4/settings64.sh
+    $ source $VIVADO_SETTINGS
+    $ make -C plutosdr-fw/hdl/projects/pluto
+
+This looks like it is (supposed to be) done automatically as part of the overall firmware build process since the same syntax is in the top level Makefile, but it may clean up all the temp files and logs after since they weren't there for me until I ran this manually. You can tail the logs while this is running:
 
 	$ tail -f plutosdr-fw/hdl/projects/pluto/pluto_vivado.log
+
+
+== Understanding the FPGA design
+Let's dive into the design. It seems like the following Analog Devices HDL library modules get built:
+
+[cols="2*<.^",options="header"]
+|==============================
+| https://github.com/analogdevicesinc/hdl/tree/master/library[HDL Library Modules] | Description
+| https://github.com/analogdevicesinc/hdl/tree/master/library/axi_ad9361[axi_ad9361] | The IP core for the Analog Devices 9361 DAC/ADC chip. Documentation is https://wiki.analog.com/resources/fpga/docs/axi_ad9361[here]
+| https://github.com/analogdevicesinc/hdl/tree/master/library/axi_dmac[axi_dmac] | ADI AXI DMA Controller
+| https://github.com/analogdevicesinc/hdl/tree/master/library/util_axis_fifo[util_axis_fifo] |
+| https://github.com/analogdevicesinc/hdl/tree/master/library/util_cdc[util_cdc] | ADI Clock-Domain-Crossing Utils
+| https://github.com/analogdevicesinc/hdl/tree/master/library/util_axis_resize[util_axis_resize] |
+| https://github.com/analogdevicesinc/hdl/tree/master/library/util_fir_dec[util_fir_dec] |
+| https://github.com/analogdevicesinc/hdl/tree/master/library/util_fir_int[util_fir_int] |
+|==============================
+
+These somewhat match up with the block diagram for the PlutoSDR Vivado project. There is more than 1 instance of some of them:
+
+[cols="2*<.^",options="header"]
+|==============================
+| Block Diagram Components | Description
+| axi_ad9361 |
+| axi_ad9361_adc_dma | ADI AXI DMA Controller
+| axi_ad9361_dac_dma | ADI AXI DMA Controller
+| axi_ad9361_dac_data_i1_GND | Gives a constant signed value.
+| axi_ad9361_dac_data_q1_GND | Gives a constant signed value.
+| axi_ad9361_tdd_sysnc_GND | Gives a constant signed value.
+
+| axi_cpu_interconnect | The AXI Interconnect IP connects one or more AXI memory-mapped master devices to one or more AXI memory mapped slave devices.
+| axi_hp1_interconnect | The AXI Interconnect IP connects one or more AXI memory-mapped master devices to one or more AXI memory mapped slave devices.
+| axi_hp2_interconnect | The AXI Interconnect IP connects one or more AXI memory-mapped master devices to one or more AXI memory mapped slave devices.
+| axi_iic_main | AXI IIC controller.
+
+| fir_decimator |
+| fir_interpolator |
+| decim_slice | Slices a number of bits off of Din input. dout = din[from_position : to_position]
+| interp_slice | Slices a number of bits off of Din input. dout = din[from_position : to_position]
+
+| sys_ps7 | Arm dual core SOC with Zynq fpga
+| sys_rstgen | Processor Reset System
+|==============================
+
+
+=== Receive Chain
+image::rx_1.png[float="right"]
+
+The IP core `axi_ad9361` provides the interfaces for the https://wiki.analog.com/resources/fpga/docs/axi_ad9361[ADI 9361] chip. In the PlutoSDR FPGA image design, the receive chain starts with three pins on this block:
+
+ * `adc_valid_i0` - this single wire is used to indicate that there is valid data ready to be clocked out on the `adc_data_i0` bus. In the PlutoSDR design, it seems this wire also is used to indicate the same for the `adc_data_q0` bus since the `adc_valid_q0` is unconnected, so they must both be read at the same time.
+ * `adc_data_i0[15:0]` - this is a 16 bit wide bus that contains a single sample value (I). The actual precision of the value may not be 16 bits, ADI just decided to keep their interfaces standard so if your ADC only supports say 12 bit precision then the values are sign extended (padded) into 16 bits.
+ * `adc_data_q0[15:0]` - ditto for the second sample (Q).
+
+There are a few other ADC pins that are not important for us to add DSP stuff:
+
+  * `adc_enable_*` - pins which are only for software use (through a memory mapped register)
+  * `adc_dovf` - overflow indicator which is connected to the DMA but interestingly not any DSP modules in-between
+  * `adc_dunf` - underflow indicator which isn't connected in this design (unlikely to happen in RX path?)
+  * `adc_r1_mode` - wire indicating single channel mode which is also unconnected here
+
+Below, you can see the general RX data path highlighted:
+
+ 1. From the AD9361 (`axi_ad9361`) at the top of the image
+ 2. Through a decimation block (`fir_decimator`)
+ 3. Into a DMA controller (`axi_ad9361_adc_dma`)
+ 4. Into an AXI interconnect block (`axi_hp1_interconnect`)
+ 5. And finally into the Zynq ARM "Processing System (PS)" (`sys_ps7`) at the right of the image.
+
+image::rx_2.png[align="center"]
+
+Now, what we'd like to be able to do is add more DSP modules somewhere in here without mucking up the general design and causing ourselves too many headaches. So we'll start with a simple module that does a multiplication (bit shift) of the incoming samples and try to stick it right after the decimation block before the DMA takes over.
+
+
+
 
 
 === Some Code
@@ -159,4 +374,3 @@ You can tail the logs while this is running:
 ----
 include::testPlutoSDR.c[tag=code]
 ----
-
