@@ -362,7 +362,9 @@ Below, you can see the general RX data path highlighted:
 
 image::rx_2.png[align="center"]
 
+=== Create a new DSP block
 Now, what we'd like to be able to do is add more DSP modules somewhere in here without mucking up the general design and causing ourselves too many headaches. So we'll start with a simple module that does a multiplication (bit shift) of the incoming samples and try to stick it right after the decimation block before the DMA takes over.
+
 
 
 
