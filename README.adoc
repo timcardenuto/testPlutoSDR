@@ -52,7 +52,7 @@ Check that everything works, plug in your PlutoSDR and run `iio_info -s`. If you
 	Compiled with backends: local xml ip usb
 	Available contexts:
 		0: Local devices [local:]
-		1: 0456:b673 (Analog Devices Inc. PlutoSDR (ADALM-PLUTO)), serial=104473ce69910006eeff1e006dad89b158 [usb:2.4.
+		1: 0456:b673 (Analog Devices Inc. PlutoSDR (ADALM-PLUTO)), serial=104473ce69910006eeff1e006dad89b158 [usb:2.22.5]
 
 == Connect to PlutoSDR
 You should now be able to connect to the PlutoSDR over serial using the username `root` and password `analog`.

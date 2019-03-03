@@ -32,20 +32,20 @@ use IEEE.STD_LOGIC_1164.ALL;
 --use UNISIM.VComponents.all;
 
 entity multiply is
-    Port ( data_in : in STD_LOGIC_VECTOR (31 downto 0);
-           data_out : out STD_LOGIC_VECTOR (31 downto 0);
-           valid_in : in STD_LOGIC;
-           valid_out : out STD_LOGIC;
-           clk : in STD_LOGIC);
+    Port(clk       : in  std_logic;
+         valid_in  : in  std_logic;
+         data_in   : in  std_logic_vector(31 downto 0);
+         valid_out : out std_logic;
+         data_out  : out std_logic_vector(31 downto 0));
 end multiply;
 
 architecture Behavioral of multiply is
-    signal data_out_sig: std_logic_vector(31 downto 0):=(others => '0');
-    signal data_available: std_logic:='0';
+    signal data_out_sig   : std_logic_vector(31 downto 0) := (others=>'0');
+    signal data_available : std_logic := '0';
 begin
 
 -- create process called 'mul' to multiply data_in
-mul : process (clk)
+mul : process(clk)
 begin
     if rising_edge(clk) then
         if (valid_in='1') then

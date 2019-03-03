@@ -38,28 +38,28 @@ end multiply_tb;
 architecture Behavioral of multiply_tb is
 
     Component multiply
-    Port( data_in : in STD_LOGIC_VECTOR (31 downto 0);
-        data_out : out STD_LOGIC_VECTOR (31 downto 0);
-        valid_in : in STD_LOGIC;
-        valid_out : out STD_LOGIC;
-        clk : in STD_LOGIC);
+    Port(clk       : in  std_logic;
+         valid_in  : in  std_logic;
+         data_in   : in  std_logic_vector(31 downto 0);
+         valid_out : out std_logic;
+         data_out  : out std_logic_vector(31 downto 0));
     End Component;
     
-    -- I = 5 and Q = 13
-    signal data_in : std_logic_vector (31 downto 0) := "0000000000000101" & "0000000000001101";
-    signal valid_in : std_logic := '0';
-    signal clk : std_logic := '0';
+    -- data_in = x"0005000D"
+    signal clk       : std_logic := '0';
+    signal valid_in  : std_logic := '0';
+    signal data_in   : std_logic_vector(31 downto 0) := x"0005" & x"000D";
     signal valid_out : std_logic;
-    signal data_out : std_logic_vector (31 downto 0);
+    signal data_out  : std_logic_vector(31 downto 0);
 
 begin
 
     uut : multiply Port Map (
-        data_in => data_in,
-        data_out => data_out,
+        clk => clk,
         valid_in => valid_in,
+        data_in => data_in,
         valid_out => valid_out,
-        clk => clk);
+        data_out => data_out);
 
     stim : process
     begin
