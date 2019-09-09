@@ -10,14 +10,16 @@ Just my notes/files on using the PlutoSDR with CentOS 7. The source code, at lea
  - https://elinux.org/images/2/2a/Using-buildroot-real-project.pdf
 
 == Setup libiio driver
-Original instructions https://wiki.analog.com/university/tools/pluto/drivers/linux[here] and https://wiki.analog.com/resources/tools-software/linux-software/libiio#how_to_build_it[here]. There's apparently some bug so you have to update a linux kernel header file first:
+There is now an RPM release for CentOS 7! Get it here: http://swdownloads.analog.com/cse/travis_builds/master_latest_libiio-centos-7-x86_64.rpm 
+
+If for some reason that doesn't work you can always build it yourself as follows in this section. Original instructions https://wiki.analog.com/university/tools/pluto/drivers/linux[here] and https://wiki.analog.com/resources/tools-software/linux-software/libiio#how_to_build_it[here]. There's apparently some bug so you have to update a linux kernel header file to get USB support in libiio:
 
 	$ curl -s https://raw.githubusercontent.com/torvalds/linux/master/include/uapi/linux/usb/functionfs.h -o functionfs.h
 	$ sudo mv functionfs.h /usr/include/linux/usb/
 
 Install some deps:
 
-	$ sudo yum install xml2 libxml2-devel bison flex cmake
+	$ sudo yum install xml2 libxml2-devel bison flex cmake libusbx-devel
 
 Build and install the library:
 
@@ -106,22 +108,18 @@ You might need to fix the permissions on the file by running `chmod 644 ~/.ssh/c
     http://wiki.analog.com/university/tools/pluto
     #
 
-So what's cool is that you can actual use the same iio interface calls from both the host (laptop/PC) and target (embedded device/PlutoSDR) so the same testPlutoSDR source code will work on either platform, just with a re-compile. To use this program on the host just run `make` which is really only doing this:
+To use the test program in this repo on your host computer just run `make`, which is really only doing this:
 
     $ gcc -o testPlutoSDR testPlutoSDR.c -I/usr/include -liio
-
-To cross-compile for the PlutoSDR ARM with the same iio interface  (might have to make buildroot first):
-
-   $ plutosdr-fw/buildroot/output/host/usr/bin/arm-xilinx-linux-gnueabi-gcc -o testPlutoSDR_ARM testPlutoSDR.c -I.plutosdr-fw/buildroot/output/host/arm-buildroot-linux-gnueabi/sysroot/usr/include -liio
-
-Or for a cmake project:
-
-   $ cmake -DCMAKE_TOOLCHAIN_FILE=plutosdr-fw/buildroot/output/toolchainfile.cmake
-   $ make
 
 
 
 == Setup Zynq/ARM build environment
+Having followed the above sections you should be able to happily write code to interface with the PlutoSDR, but if any of the following situations apply then you'll want to continue: 
+
+    1. You want to compile code to run on the PlutoSDR itself in the ARM image, which requires the embedded toolchain.
+    2. You want to include your cross-compiled code in the ARM image so it's always loaded when the device boots.
+    3. You want to modify the FPGA image.
 
 Install some dependencies:
 
@@ -139,9 +137,9 @@ Download and install the 2016.4 version of Xilinx Vivado and SDK to `/opt/Xilinx
 	$ export PATH=$PATH:/opt/Xilinx/SDK/2016.4/bin:/opt/Xilinx/SDK/2016.4/gnu/arm/lin/bin
 	$ export VIVADO_SETTINGS=/opt/Xilinx/Vivado/2016.4/settings64.sh
 
-Grab the core PlutoSDR source code and the this test program (if you didn't already):
+Grab the core PlutoSDR source code and this test program if you haven't already:
 
-	$ git clone --recursive https://github.com/analogdevicesinc/plutosdr-fw.git
+    $ git clone --recursive https://github.com/analogdevicesinc/plutosdr-fw.git
     $ git clone https://github.com/timcardenuto/testPlutoSDR.git
 
 
@@ -254,6 +252,17 @@ When the LED stops blinking run the DFU reflash command:
 
 
 When that's done, unplug and reattach the PlutoSDR. Now when you ssh/serial in you'll find `/usr/bin/testPlutoSDR` which will use the IIO library to tune and receive samples from the AD936x.
+
+== Shortcuts
+If you're just trying to compile your code for the PlutoSDR ARM without having to rebuild the entire image, you can just reference the buildroot binaries/libraries. This will only work after you've built the buildroot image the first time.
+
+    $ plutosdr-fw/buildroot/output/host/usr/bin/arm-xilinx-linux-gnueabi-gcc -o testPlutoSDR_ARM testPlutoSDR.c -I.plutosdr-fw/buildroot/output/host/arm-buildroot-linux-gnueabi/sysroot/usr/include -liio
+
+Or using cmake:
+
+    $ cmake -DCMAKE_TOOLCHAIN_FILE=plutosdr-fw/buildroot/output/toolchainfile.cmake
+    $ make
+
 
 
 == What are all these files?

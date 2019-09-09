@@ -266,11 +266,37 @@ int setAttribute(struct iio_channel* chn, char* attr, long long value) {
 
 int main (int argc, char **argv)
 {
-	if (argc == 1) { displayCmdUsage(); }
+	//if (argc == 1) { displayCmdUsage(); }
 	parseCmdArgs(argc, argv);
 	printf("#### Starting PlutoSDR Test ####\n");
 
-	// TODO how to find/get the URI's programatically?
+	if (!uri) {
+		struct iio_scan_context* scan_ctx = iio_create_scan_context(NULL, 0);
+		if (!scan_ctx) {
+			fprintf(stderr, "Unable to create scan context\n");
+			return;
+		}
+
+		struct iio_context_info **info;
+		ssize_t ret = iio_scan_context_get_info_list(scan_ctx, &info);
+		if (ret < 0) {
+			fprintf(stderr, "Unable to scan: %li\n", (long) ret);
+			iio_scan_context_destroy(scan_ctx);
+		}
+		if (ret == 0) {
+			printf("No contexts found.\n");
+			iio_context_info_list_free(info);
+			iio_scan_context_destroy(scan_ctx);
+		}
+
+		printf("Available contexts:\n");
+		int i = 0;
+		for (i = 0; i < (size_t)ret; i++) {
+			uri = iio_context_info_get_uri(info[i]);
+			printf("	%s\n", uri);
+		}
+	}
+
 	//ctx = iio_create_context_from_uri("ip:192.168.2.1");
 	struct iio_context* ctx = iio_create_context_from_uri(uri);
 	printf("Created context for uri %s\n",uri);
