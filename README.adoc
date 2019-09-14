@@ -77,7 +77,13 @@ You should now be able to connect to the PlutoSDR over serial using the username
     http://wiki.analog.com/university/tools/pluto
     #
 
-To exit the serial connection you press `Ctrl-A` and then `\` and then `y` and then `Enter`. The PlutoSDR is apparently also auto-mounted as a storage device and an Ethernet device. To ssh to it over the Ethernet connection, add the following to your `~/.ssh/config` file:
+To exit the serial connection you press `Ctrl-A` and then `\` and then `y` and then `Enter`. 
+
+The PlutoSDR is apparently also auto-mounted as a storage device and an Ethernet device. To ssh to it over the Ethernet connection, you first need to change your Ethernet interface (a new one should have been created when the PlutoSDR was attached) to be on the same subnet, the default address of the plutosdr is `192.168.2.1` so do something like:
+
+    sudo ifconfig enp0s20u3 192.168.2.100
+
+Then add the following to your `~/.ssh/config` file:
 
     # This is the default ssh_config for the PlutoSDR
     # This file should be located in ~/.ssh/config or /etc/ssh/ssh_config

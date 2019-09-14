@@ -1,0 +1,4 @@
+Log file created at: 2019/09/14 17:01:03
+Running on machine: laptop1
+Log line format: [IWEF]mmdd hh:mm:ss.uuuuuu threadid file:line] msg
+W0914 17:01:03.122257 14213 main.cc:183] C++ Standard Library exception: Unable to create context
