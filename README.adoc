@@ -391,3 +391,33 @@ Now, what we'd like to be able to do is add more DSP modules somewhere in here w
 ----
 include::testPlutoSDR.c[tag=code]
 ----
+
+
+=== GNU Radio Support
+The PlutoSDR can be used with GNU Radio by installing the `gr-iio` project. First you'll need the actual gnuradio project:
+
+	sudo yum install epel-release
+	sudo yum install gnuradio gnuradio-devel
+
+If you want a newer version then you'll have to build it from source or find an alternate RPM release. Next build the dependency `libad9361-iio` and the gnuradio driver `gr-iio`:
+
+	git clone https://github.com/analogdevicesinc/libad9361-iio
+	cd libad9361-iio
+	mkdir build
+	cd build
+	cmake ..
+	make
+	sudo make install
+	sudo ldconfig
+
+	git clone https://github.com/analogdevicesinc/gr-iio
+	cd gr-iio
+	mkdir build
+	cd build
+	cmake ..
+	make
+	sudo make install
+	sudo ldconfig
+
+
+
